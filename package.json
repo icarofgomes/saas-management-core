@@ -11,7 +11,7 @@
     "db:seed": "sequelize-cli db:seed:all --require ts-node/register",
     "db:seed:undo": "sequelize-cli db:seed:undo:all --require ts-node/register",
     "migrate": "npm run build && env $(cat .env) npx sequelize-cli db:create && env $(cat .env) npx sequelize db:migrate",
-    "reset-db": "npm run build && env $(cat .env) npx sequelize-cli db:drop && env $(cat .env) npx sequelize-cli db:create && npm run migrate",
+    "reset-db": "npm run build && npx sequelize-cli db:drop && npx sequelize-cli db:create && npm run migrate",
     "lint": "eslint . --ext .ts --fix"
   },
   "dependencies": {
