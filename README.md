@@ -185,6 +185,33 @@ Authorization: Bearer <token>
 
 ---
 
+## 📡 Observabilidade
+
+O sistema possui suporte preparado para integração com ferramentas de monitoramento como Sentry.
+
+### Funcionalidades implementadas:
+
+- Logging estruturado com Pino
+- Correlação de requisições via `requestId`
+- Captura de erros inesperados com contexto enriquecido
+
+### Integração com Sentry (opcional)
+
+A integração pode ser ativada configurando a variável:
+
+```
+SENTRY_DSN=<your-dsn>
+```
+
+E habilitando o módulo em:
+
+- `src/config/sentry.ts`
+- `src/utils/observability.ts`
+
+Erros inesperados já estão preparados para envio automático.
+
+---
+
 📌 Conclusão
 
 Este projeto demonstra:

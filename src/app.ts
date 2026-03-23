@@ -16,8 +16,13 @@ import lessonRoutes from './routes/lesson.routes';
 import planRoutes from './routes/plan.routes';
 import saleRoutes from './routes/sale.routes';
 import invoiceRoutes from './routes/invoice.routes';
+import { requestIdMiddleware } from './middlewares/requestId';
+import { requestLogger } from './middlewares/requestLogger';
 
 const app = express();
+
+app.use(requestIdMiddleware);
+app.use(requestLogger);
 
 app.use(
   cors({

@@ -1,24 +1,55 @@
-// src/middlewares/ErrorHandler.ts
 import { Request, Response, NextFunction } from 'express';
-
-interface CustomError extends Error {
-  statusCode?: number;
-  details?: string;
-}
+import { AppError } from '../errors/AppError';
+import { logger } from '../utils/logger';
+import { env } from 'src/config/env';
+import { captureException } from 'src/utils/observality';
 
 export class ErrorHandler {
   public static handle(
-    err: CustomError, // Usando CustomError para tipos mais específicos
-    _req: Request,
+    err: unknown,
+    req: Request,
     res: Response,
     _next: NextFunction,
   ): void {
-    console.error(err); // Pode ser customizado com um logger
+    const isAppError = err instanceof AppError;
 
-    const status = err.statusCode || 500; // Usando statusCode se estiver presente
-    const message = err.message || 'Internal Server Error';
-    const details = err.details || '';
+    const statusCode = isAppError ? err.statusCode : 500;
+    const message = isAppError ? err.message : 'Internal Server Error';
 
-    res.status(status).json({ error: message, details });
+    const details = isAppError ? err.details : undefined;
+
+    // LOG ESTRUTURADO COMPLETO
+    logger.error({
+      type: isAppError ? 'BUSINESS_ERROR' : 'SYSTEM_ERROR',
+      message,
+      statusCode,
+      details,
+
+      stack: !isAppError && err instanceof Error ? err.stack : undefined,
+
+      requestId: req.requestId,
+      method: req.method,
+      path: req.originalUrl,
+      userId: req.user?.userId,
+
+      body: env.isProduction ? undefined : req.body,
+      params: req.params,
+      query: env.isProduction ? undefined : req.query,
+    });
+
+    if (!isAppError) {
+      captureException(err, {
+        requestId: req.requestId,
+        userId: req.user?.userId,
+        path: req.originalUrl,
+        method: req.method,
+      });
+    }
+
+    res.status(statusCode).json({
+      error: message,
+      details,
+      requestId: req.requestId,
+    });
   }
 }
