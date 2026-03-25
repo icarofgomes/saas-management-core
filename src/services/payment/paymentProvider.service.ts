@@ -28,7 +28,7 @@ export class PaymentProviderService {
   }
 
   private getFallbackProvider(): PaymentProvider | null {
-    const fallback = process.env.FALLBACK_PAYMENT_PROVIDER;
+    const fallback = process.env.FALLBACK_PAYMENT_PROVIDER || 'altMock';
 
     if (!fallback) return null;
 

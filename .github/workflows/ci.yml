@@ -31,6 +31,8 @@ jobs:
       MYSQL_DATABASE_NAME: test_db
       DB_DIALECT: mysql
       JWT_SECRET: test_secret
+      PAYMENT_PROVIDER: mock
+      FALLBACK_PAYMENT_PROVIDER: altMock
 
     steps:
       - uses: actions/checkout@v4
@@ -38,8 +40,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - run: npm install
+
+      - name: Wait for MySQL
+        run: |
+          until mysqladmin ping -h "127.0.0.1" --silent; do
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
 
       - run: npm run build
 
