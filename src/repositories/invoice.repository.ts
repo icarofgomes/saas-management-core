@@ -17,8 +17,8 @@ export class InvoiceRepository {
     return models.Invoice.create(data, { transaction });
   }
 
-  async findById(id: string) {
-    return models.Invoice.findByPk(id);
+  async findById(id: string, transaction?: Transaction) {
+    return models.Invoice.findByPk(id, { transaction });
   }
 
   async findAllByParentId(parentId: string) {
@@ -40,5 +40,36 @@ export class InvoiceRepository {
         },
       ],
     });
+  }
+
+  async updateStatus(
+    id: string,
+    status: 'pending' | 'paid' | 'overdue',
+    transaction?: Transaction,
+  ) {
+    return models.Invoice.update(
+      { status },
+      {
+        where: { id },
+        transaction,
+      },
+    );
+  }
+
+  async markAsPaid(
+    id: string,
+    paidDate: Date | string = new Date(),
+    transaction?: Transaction,
+  ) {
+    return models.Invoice.update(
+      {
+        status: 'paid',
+        paidDate,
+      },
+      {
+        where: { id },
+        transaction,
+      },
+    );
   }
 }

@@ -4,6 +4,7 @@ import { PlanRepository } from 'src/repositories/plan.repository';
 import { sequelize } from 'src/database/sequelize';
 import { AppError } from 'src/errors/AppError';
 import { ErrorMessages } from 'src/errors/ErrorMessages';
+import { PaymentService } from 'src/services/payment/payment.service';
 
 interface CreateSaleDTO {
   parentId: string;
@@ -17,6 +18,7 @@ export class SaleService {
   private saleRepository = new SaleRepository();
   private invoiceRepository = new InvoiceRepository();
   private planRepository = new PlanRepository();
+  private paymentService = new PaymentService();
 
   async createSale(data: CreateSaleDTO) {
     const transaction = await sequelize.transaction();
@@ -56,34 +58,32 @@ export class SaleService {
         const invoiceMonth = new Date(
           startYear,
           new Date(data.startMonth).getMonth() + i,
-          1, // Primeiro dia do mês
+          1,
         );
 
-        // Extraímos o dia de vencimento (por exemplo, 20, de 20/01/2025)
-        const dueDay = new Date(data.dueDate).getDate(); // Dia do vencimento
+        const dueDay = new Date(data.dueDate).getDate();
 
-        // Ajustamos o dueDate para o mês correto mantendo o mesmo dia
         const dueDate = new Date(invoiceMonth.setDate(dueDay));
 
-        // Caso o dia do vencimento seja maior que o último dia do mês, ajusta para o último dia do mês
         if (dueDate.getMonth() !== invoiceMonth.getMonth()) {
           dueDate.setMonth(invoiceMonth.getMonth());
-          dueDate.setDate(0); // Coloca a data para o último dia do mês
+          dueDate.setDate(0);
         }
 
-        // Criação da fatura com o dueDate ajustado
-        await this.invoiceRepository.create(
+        const invoice = await this.invoiceRepository.create(
           {
             saleId: sale.id,
             parentId: data.parentId,
             month: invoiceMonth,
             amount: Number(plan.price),
             status: 'pending',
-            dueDate: dueDate, // A data de vencimento agora está ajustada
+            dueDate: dueDate,
             paidDate: null,
           },
           transaction,
         );
+
+        await this.paymentService.requestPayment(invoice.id, transaction);
       }
 
       await transaction.commit();

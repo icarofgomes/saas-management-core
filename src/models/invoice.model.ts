@@ -28,6 +28,12 @@ export class Invoice extends Model {
       onDelete: 'CASCADE',
       onUpdate: 'CASCADE',
     });
+    Invoice.hasMany(models.Payment, {
+      foreignKey: 'invoiceId',
+      as: 'payments',
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    });
   }
 
   public static initModel(sequelize: Sequelize): typeof Invoice {

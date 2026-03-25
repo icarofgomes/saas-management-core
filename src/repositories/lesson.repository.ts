@@ -60,64 +60,6 @@ export class LessonRepository {
     });
   }
 
-  // async findLessonsByUserId(userId: string) {
-  //   const include: Includeable[] = [
-  //     {
-  //       model: models.Student,
-  //       as: 'students',
-  //       include: [
-  //         {
-  //           model: models.Lesson,
-  //           as: 'lessons',
-  //           attributes: {
-  //             exclude: [
-  //               'createdAt',
-  //               'updatedAt',
-  //               'subjectId',
-  //               'schduleId',
-  //               'teacherId',
-  //             ],
-  //           },
-  //           through: { attributes: [] },
-  //           include: [
-  //             {
-  //               model: models.Subject,
-  //               as: 'subject',
-  //               attributes: { exclude: ['createdAt', 'updatedAt'] },
-  //             },
-  //             {
-  //               model: models.Schedule,
-  //               as: 'schedule',
-  //               attributes: ['startDateTime'],
-  //             },
-  //             {
-  //               model: models.Teacher,
-  //               as: 'teacher',
-  //               attributes: ['id', 'firstName', 'lastName'],
-  //             },
-  //           ],
-  //         },
-  //       ],
-  //     },
-  //   ];
-
-  //   const parent = await models.Parent.findOne({
-  //     where: { userId },
-  //     include,
-  //   });
-
-  //   if (!parent) return null;
-
-  //   const allLessons = (parent.students ?? []).flatMap(
-  //     (student) => student.lessons ?? [],
-  //   );
-
-  //   const uniqueLessons = Array.from(
-  //     new Map(allLessons.map((lesson) => [lesson.id, lesson])).values(),
-  //   );
-
-  //   return uniqueLessons;
-  // }
   async findLessonsByParentUserId(userId: string) {
     const include: Includeable[] = [
       {
@@ -295,7 +237,7 @@ export class LessonRepository {
         {
           model: models.Schedule,
           as: 'schedule',
-          where: { unitId }, // 👈 Aqui filtramos pela unidade dentro de schedule
+          where: { unitId }, // Aqui filtramos pela unidade dentro de schedule
           attributes: ['startDateTime'], // Você pode incluir mais se quiser
         },
         {
