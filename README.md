@@ -5,7 +5,7 @@
 Este projeto é um **core SaaS multi-tenant** para gestão de unidades educacionais.  
 Ele implementa autenticação, controle de acesso baseado em roles (RBAC), agendamento de aulas e gerenciamento de salas e alunos.
 
-O objetivo é servir como **portfólio técnico**, demonstrando boas práticas em Node.js, TypeScript, arquitetura em camadas e integração com banco de dados relacional.
+O objetivo principal é servir como **portfólio técnico de alto nível**, demonstrando boas práticas em Node.js, TypeScript, arquitetura em camadas, integração com banco relacional e engenharia de software sênior aplicada a problemas reais de produção.
 
 ---
 
@@ -24,12 +24,15 @@ Para rodar o projeto localmente, siga as instruções completas [aqui](./docs/SE
 - **Autenticação:** JWT
 - **Hash de senha:** argon2
 - **Testes:** Jest + Supertest
+- **Logging:** Pino (estruturado)
+- **Observabilidade:** Captura de exceções pronta para Sentry
 
 ---
 
 ## 🏛 Arquitetura & Padrões
 
 O projeto segue a arquitetura **em camadas**:
+
 routes → controller → service → repository → model
 
 - **Routes (`src/routes`)**: define endpoints e aplica middlewares (JWT, validação de payload)
@@ -38,11 +41,13 @@ routes → controller → service → repository → model
 - **Repositories (`src/repositories`)**: persistência (CRUD e consultas usando Models)
 - **Models (`src/models`)**: entidades Sequelize e associações
 
-**Middlewares importantes**:
+### Middlewares importantes
 
 - `authenticateToken` → valida JWT e injeta `req.user`
 - `validateSchema` → valida `req.body` com Joi
-- `errorHandler` → resposta padronizada de erros
+- `requestLogger` → logging estruturado de requisições HTTP
+- `errorHandler` → resposta padronizada de erros com contexto enriquecido
+- `requestIdMiddleware` → correlação de requisições
 
 ---
 
@@ -56,23 +61,44 @@ routes → controller → service → repository → model
 
 ---
 
-## 📊 Modelo de Dados (Resumo)
+## 💳 Payments & Webhook Reliability
 
-| Entidade | Principais Campos                              | Relacionamentos                              |
-| -------- | ---------------------------------------------- | -------------------------------------------- |
-| User     | id, email, password, roleId                    | → Role                                       |
-| Role     | id, name                                       | ← User                                       |
-| Unit     | id, name, maxRooms                             | → Room, → Schedule                           |
-| Room     | id, name, capacity, unitId                     | → Schedule                                   |
-| Schedule | id, startDateTime, endDateTime, roomId, unitId | → Lesson                                     |
-| Lesson   | id, subjectId, teacherId, scheduleId           | → Teacher, → Students, → Subject, → Schedule |
-| Student  | id, firstName, lastName, userId                | → Lessons (many-to-many)                     |
-| Teacher  | id, firstName, lastName, userId                | → Lessons, → Subjects                        |
-| Subject  | id, name                                       | → Lessons                                    |
+O fluxo de pagamentos foi desenhado para lidar com **comportamentos reais de provedores**, incluindo callbacks duplicados e fora de ordem.
+
+### Principais preocupações tratadas
+
+- **Idempotência:** callbacks duplicados não alteram o estado inconsistente.
+- **Eventos fora de ordem:** evita transições inválidas (`paid → failed`).
+- **Consistência do estado:** pagamentos seguem modelo controlado de transição:
+
+```
+processing → pending → failed → paid
+```
+
+Uma vez `paid`, o pagamento se torna imutável.
+
+- **Integridade transacional:** updates de payment e invoice são executados dentro de transações.
+- **Segurança contra concorrência:** testes simulam callbacks concorrentes.
 
 ---
 
-## ⚡ Exemplos de Uso (Endpoints)
+## 📊 Modelo de Dados (Resumo)
+
+| Entidade | Principais Campos                      | Relacionamentos |
+| -------- | -------------------------------------- | --------------- |
+| User     | id, email, password, roleId            | → Role          |
+| Role     | id, name                               | ← User          |
+| Unit     | id, name, maxRooms                     | → Room          |
+| Room     | id, name, capacity, unitId             | → Schedule      |
+| Schedule | id, startDateTime, endDateTime, roomId | → Lesson        |
+| Lesson   | id, subjectId, teacherId, scheduleId   | → Students      |
+| Student  | id, firstName, lastName, userId        | → Lessons       |
+| Teacher  | id, firstName, lastName, userId        | → Lessons       |
+| Subject  | id, name                               | → Lessons       |
+
+---
+
+## ⚡ Exemplos de Uso
 
 ### Criar Aula
 
@@ -80,7 +106,9 @@ routes → controller → service → repository → model
 POST /api/lessons
 Authorization: Bearer <token>
 Content-Type: application/json
+```
 
+```json
 {
   "subjectId": 1,
   "teacherId": "teacher-uuid",
@@ -89,7 +117,7 @@ Content-Type: application/json
 }
 ```
 
-**Resposta:**
+### Resposta
 
 ```json
 {
@@ -105,119 +133,24 @@ Content-Type: application/json
 
 ---
 
-### Adicionar Aluno a Aula
-
-```http
-POST /api/lessons/{lessonId}/students
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "studentId": "student-uuid"
-}
-```
-
-**Resposta:**
-
-```json
-{
-  "status": "SUCCESS",
-  "data": {
-    "lessonId": "lesson-uuid",
-    "studentId": "student-uuid"
-  }
-}
-```
-
----
-
-### Buscar Aulas por Usuário
-
-```http
-GET /api/lessons/parent/{userId}
-Authorization: Bearer <token>
-```
-
-**Resposta:**
-
-```json
-{
-  "status": "SUCCESS",
-  "data": [
-    {
-      "id": "lesson-uuid",
-      "subject": { "id": 1, "name": "Matemática" },
-      "schedule": { "startDateTime": "2026-03-20T10:00:00.000Z" },
-      "teacher": {
-        "id": "teacher-uuid",
-        "firstName": "Ana",
-        "lastName": "Silva"
-      },
-      "student": {
-        "id": "student-uuid",
-        "firstName": "João",
-        "lastName": "Pereira"
-      }
-    }
-  ]
-}
-```
-
----
-
-📈 Fluxo Principal (Aula → Sala → Alunos)
-
-```
-[User] --(role)--> [Dashboard]
-   |
-   v
-[LessonService]
-   |
-   v
-[LessonRepository] --(verifica sala disponível)--> [RoomRepository]
-   |
-   v
-[ScheduleRepository] --(cria agendamento)
-   |
-   v
-[LessonStudentRepository] --(matrícula alunos)
-```
-
----
-
 ## 📡 Observabilidade
 
-O sistema possui suporte preparado para integração com ferramentas de monitoramento como Sentry.
-
-### Funcionalidades implementadas:
-
 - Logging estruturado com Pino
-- Correlação de requisições via `requestId`
-- Captura de erros inesperados com contexto enriquecido
-
-### Integração com Sentry (opcional)
-
-A integração pode ser ativada configurando a variável:
-
-```
-SENTRY_DSN=<your-dsn>
-```
-
-E habilitando o módulo em:
-
-- `src/config/sentry.ts`
-- `src/utils/observability.ts`
-
-Erros inesperados já estão preparados para envio automático.
+- RequestId para correlação
+- Classificação de erros
+- Contexto enriquecido
+- Integração pronta para Sentry
 
 ---
 
-📌 Conclusão
+## 📌 Conclusão
 
 Este projeto demonstra:
 
-- Estrutura clara de camadas e responsabilidades
-- Boas práticas de TypeScript + Node.js + Sequelize
-- Controle de acesso RBAC
-- Multi-tenant e escalabilidade por unidades
-- Testes integrados com Jest + Supertest
+- Arquitetura em camadas
+- Boas práticas com TypeScript
+- Multi-tenant SaaS
+- RBAC
+- Testes automatizados
+- Observabilidade
+- Idempotência em pagamentos

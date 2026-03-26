@@ -2,59 +2,74 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('invoices', {
+    await queryInterface.createTable('payments', {
       id: {
         type: Sequelize.UUID,
         allowNull: false,
         primaryKey: true,
         defaultValue: Sequelize.UUIDV4,
       },
-      saleId: {
+
+      invoiceId: {
         type: Sequelize.UUID,
         allowNull: false,
         references: {
-          model: 'sales',
+          model: 'invoices',
           key: 'id',
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       },
-      parentId: {
-        type: Sequelize.UUID,
-        allowNull: false,
-        references: {
-          model: 'parents',
-          key: 'id',
-        },
-        onUpdate: 'CASCADE',
-        onDelete: 'CASCADE',
-      },
-      month: {
-        type: Sequelize.DATEONLY,
+
+      provider: {
+        type: Sequelize.STRING,
         allowNull: false,
       },
+
+      externalId: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+
+      status: {
+        type: Sequelize.ENUM(
+          'pending',
+          'processing',
+          'paid',
+          'failed',
+          'cancelled',
+        ),
+        allowNull: false,
+        defaultValue: 'pending',
+      },
+
       amount: {
         type: Sequelize.DECIMAL(10, 2),
         allowNull: false,
       },
-      status: {
-        type: Sequelize.ENUM('pending', 'paid', 'overdue'),
+
+      attempt: {
+        type: Sequelize.INTEGER,
         allowNull: false,
-        defaultValue: 'pending',
+        defaultValue: 1,
       },
-      dueDate: {
-        type: Sequelize.DATEONLY,
-        allowNull: false,
-      },
-      paidDate: {
-        type: Sequelize.DATE,
+
+      errorMessage: {
+        type: Sequelize.TEXT,
         allowNull: true,
       },
+
+      metadata: {
+        type: Sequelize.JSON,
+        allowNull: true,
+      },
+
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
+
       updatedAt: {
         allowNull: false,
         type: Sequelize.DATE,
@@ -64,6 +79,6 @@ module.exports = {
   },
 
   down: async (queryInterface) => {
-    await queryInterface.dropTable('invoices');
+    await queryInterface.dropTable('payments');
   },
 };

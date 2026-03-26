@@ -1,6 +1,7 @@
 import { TestBase } from 'tests/utils/TestBase';
 import models from 'src/models';
 import { Invoice } from 'src/models/invoice.model';
+import { Payment } from 'src/models/payment.model';
 
 class SaleTest extends TestBase {
   private unitId!: string;
@@ -92,7 +93,6 @@ class SaleTest extends TestBase {
 
         const saleId = res.body.data.id;
 
-        // Busca todas as invoices relacionadas a essa venda
         const invoices = await models.Invoice.findAll({
           where: {
             saleId,
@@ -100,22 +100,56 @@ class SaleTest extends TestBase {
           },
         });
 
-        // Quantidade de faturas esperada: 12
         expect(invoices.length).toBe(12);
 
-        // Verifica se cada fatura tem os campos corretos
         invoices.forEach((invoice) => {
           expect(invoice.saleId).toBe(saleId);
           expect(invoice.parentId).toBe(parentId);
         });
       });
 
-      // Novo teste para verificar a consulta de faturas por parentId
+      it('deve criar pagamentos automaticamente para as invoices', async () => {
+        const { parentId } = await createParent(this.unitId);
+        const firstDayOfYear = new Date(new Date().getFullYear(), 0, 1);
+
+        const res = await createSale(
+          this.unitId,
+          this.planId,
+          parentId,
+          firstDayOfYear,
+        );
+
+        expect(res.status).toBe(201);
+
+        const saleId = res.body.data.id;
+
+        const invoices = await models.Invoice.findAll({
+          where: {
+            saleId,
+          },
+        });
+
+        expect(invoices.length).toBeGreaterThan(0);
+
+        const payments = await models.Payment.findAll({
+          where: {
+            invoiceId: invoices.map((i) => i.id),
+          },
+        });
+
+        expect(payments.length).toBe(invoices.length);
+
+        payments.forEach((payment) => {
+          expect(payment.invoiceId).toBeTruthy();
+          expect(payment.amount).toBeTruthy();
+          expect(payment.status).toBeDefined();
+        });
+      });
+
       it('deve retornar todas as faturas de um parentId', async () => {
         const { parentId } = await createParent(this.unitId);
         const firstDayOfYear = new Date(new Date().getFullYear(), 0, 1);
 
-        // Cria a venda, que gerará invoices
         const res = await createSale(
           this.unitId,
           this.planId,
@@ -124,20 +158,15 @@ class SaleTest extends TestBase {
         );
         expect(res.status).toBe(201);
 
-        const saleId = res.body.data.id;
-
-        // Agora consulta as faturas para esse parentId
         const invoicesRes = await this.client
           .get(`/api/invoices/parent/${parentId}`)
           .send();
 
         expect(invoicesRes.status).toBe(200);
-        expect(invoicesRes.body.data.length).toBe(12); // Deveria ter 12 faturas
+        expect(invoicesRes.body.data.length).toBe(12);
       });
 
-      // Teste para garantir que, se não houver faturas, a resposta seja um array vazio
       it('deve retornar um array vazio se não houver faturas para o parentId', async () => {
-        // Caso de teste sem vendas ou faturas
         const nonExistentParentId = 'nonexistent-parent-id';
 
         const invoicesRes = await this.client
@@ -145,7 +174,7 @@ class SaleTest extends TestBase {
           .send();
 
         expect(invoicesRes.status).toBe(200);
-        expect(invoicesRes.body.data).toEqual([]); // A resposta deve ser um array vazio
+        expect(invoicesRes.body.data).toEqual([]);
       });
     });
   }

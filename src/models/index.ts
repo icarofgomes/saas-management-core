@@ -17,6 +17,7 @@ import { LessonStudent } from './lessonStudent.model';
 import { Invoice } from './invoice.model';
 import { Plan } from './plan.model';
 import { Sale } from './sale.model';
+import { Payment } from './payment.model';
 
 // Inicialização dos modelos
 const models = {
@@ -37,6 +38,7 @@ const models = {
   Plan: Plan.initModel(sequelize),
   Sale: Sale.initModel(sequelize),
   Invoice: Invoice.initModel(sequelize),
+  Payment: Payment.initModel(sequelize),
 };
 
 // Associações (depois que todos os modelos foram inicializados)

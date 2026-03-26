@@ -132,4 +132,28 @@ export const ErrorMessages = {
     message: 'ID do responsável é obrigatório',
     statusCode: 400,
   },
+  INVOICE_NOT_FOUND: {
+    message: 'Fatura não encontrada.',
+    statusCode: 404,
+  },
+
+  PAYMENT_NOT_FOUND: {
+    message: 'Pagamento não encontrado.',
+    statusCode: 404,
+  },
+
+  INVOICE_ALREADY_PAID: {
+    message: 'Esta fatura já está paga.',
+    statusCode: 409,
+  },
+
+  PAYMENT_PROVIDER_NOT_FOUND: {
+    message: 'Provider de pagamento não encontrado.',
+    statusCode: 500,
+  },
+
+  PAYMENT_PROVIDER_FAILED: {
+    message: 'Falha ao criar pagamento no provider.',
+    statusCode: 502,
+  },
 };

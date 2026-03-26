@@ -16,6 +16,7 @@ import lessonRoutes from './routes/lesson.routes';
 import planRoutes from './routes/plan.routes';
 import saleRoutes from './routes/sale.routes';
 import invoiceRoutes from './routes/invoice.routes';
+import paymentRoutes from './routes/payment.routes';
 import { requestIdMiddleware } from './middlewares/requestId';
 import { requestLogger } from './middlewares/requestLogger';
 
@@ -48,6 +49,7 @@ app.use('/api', lessonRoutes);
 app.use('/api', planRoutes);
 app.use('/api', saleRoutes);
 app.use('/api', invoiceRoutes);
+app.use('/api', paymentRoutes);
 
 // Middleware de tratamento de erro
 app.use(ErrorHandler.handle);
