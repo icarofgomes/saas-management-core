@@ -9,6 +9,7 @@ import { PaymentStatus } from 'src/types/payment/paymentStatus.type';
 
 import { AppError } from 'src/errors/AppError';
 import { ErrorMessages } from 'src/errors/ErrorMessages';
+import { logger } from 'src/utils/logger';
 
 export class PaymentService {
   private paymentRepository = new PaymentRepository();
@@ -45,7 +46,7 @@ export class PaymentService {
         trx,
       );
 
-      const providerResponse =
+      const { provider, response: providerResponse } =
         await this.paymentProviderService.createPayment(createPaymentDTO);
 
       if (!providerResponse.success || !providerResponse.externalId) {
@@ -59,6 +60,7 @@ export class PaymentService {
       await this.paymentRepository.updateExternalData(
         payment.id,
         {
+          provider,
           externalId: providerResponse.externalId,
           paymentUrl: providerResponse.paymentUrl,
           rawResponse: providerResponse.raw,
@@ -87,6 +89,32 @@ export class PaymentService {
         throw new AppError(ErrorMessages.PAYMENT_NOT_FOUND);
       }
 
+      // Se já está pago, ignora qualquer coisa
+      if (payment.status === 'paid') {
+        await transaction.commit();
+
+        logger.warn({
+          type: 'PAYMENT_CALLBACK_IGNORED',
+          reason: 'already_paid',
+          externalId,
+        });
+
+        return { status: 'IGNORED_ALREADY_PAID' };
+      }
+
+      // Se for duplicado do mesmo status
+      if (payment.status === status) {
+        await transaction.commit();
+
+        logger.warn({
+          type: 'PAYMENT_CALLBACK_DUPLICATED',
+          reason: 'same_status',
+          externalId,
+        });
+
+        return { status: 'IGNORED_DUPLICATED' };
+      }
+
       await this.paymentRepository.updateStatus(
         payment.id,
         status,
@@ -94,14 +122,21 @@ export class PaymentService {
       );
 
       if (status === 'paid') {
-        await this.invoiceRepository.updateStatus(
+        await this.invoiceRepository.markAsPaid(
           payment.invoiceId,
-          'paid',
+          new Date(),
           transaction,
         );
       }
 
       await transaction.commit();
+
+      logger.info({
+        type: 'PAYMENT_CALLBACK',
+        externalId,
+        previousStatus: payment.status,
+        newStatus: status,
+      });
 
       return { status: 'SUCCESS' };
     } catch (error) {

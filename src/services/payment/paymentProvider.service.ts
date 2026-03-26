@@ -1,6 +1,6 @@
 import { PaymentProvider } from 'src/types/payment/interfaces/paymentProvider.interface';
 import { CreatePaymentDTO } from 'src/types/payment/dto/createPayment.dto';
-import { PaymentResponse } from 'src/types/payment/interfaces/paymentResponse.interface';
+import { ProviderExecutionResult } from 'src/types/payment/providerExecutionResult.type';
 
 import { MockProvider } from './providers/mock.provider';
 import { AltMockProvider } from './providers/altMock.provider';
@@ -35,15 +35,25 @@ export class PaymentProviderService {
     return this.providers[fallback] || null;
   }
 
-  async createPayment(data: CreatePaymentDTO): Promise<PaymentResponse> {
-    const defaultProvider = this.getDefaultProvider();
-    const fallbackProvider = this.getFallbackProvider();
+  async createPayment(
+    data: CreatePaymentDTO,
+  ): Promise<ProviderExecutionResult> {
+    const defaultProviderName = process.env.DEFAULT_PAYMENT_PROVIDER || 'mock';
+
+    const fallbackProviderName =
+      process.env.FALLBACK_PAYMENT_PROVIDER || 'altMock';
+
+    const defaultProvider = this.providers[defaultProviderName];
+    const fallbackProvider = this.providers[fallbackProviderName];
 
     try {
       const response = await defaultProvider.createPayment(data);
 
       if (response.success) {
-        return response;
+        return {
+          provider: defaultProviderName,
+          response,
+        };
       }
 
       throw new Error('Primary provider failed');
@@ -54,7 +64,10 @@ export class PaymentProviderService {
 
       const fallbackResponse = await fallbackProvider.createPayment(data);
 
-      return fallbackResponse;
+      return {
+        provider: fallbackProviderName,
+        response: fallbackResponse,
+      };
     }
   }
 

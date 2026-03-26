@@ -47,7 +47,7 @@ module.exports = {
         allowNull: false,
       },
       paidDate: {
-        type: Sequelize.DATEONLY,
+        type: Sequelize.DATE,
         allowNull: true,
       },
       createdAt: {

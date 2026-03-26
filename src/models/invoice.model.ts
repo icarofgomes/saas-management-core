@@ -71,7 +71,7 @@ export class Invoice extends Model {
           allowNull: false,
         },
         paidDate: {
-          type: DataTypes.DATEONLY,
+          type: DataTypes.DATE,
           allowNull: true,
         },
       },

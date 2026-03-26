@@ -6,7 +6,7 @@ export class PaymentRepository {
   async create(
     data: {
       invoiceId: string;
-      provider: string;
+      provider: string | null;
       externalId?: string | null;
       status?: PaymentStatus;
       amount: number;
@@ -52,6 +52,7 @@ export class PaymentRepository {
   async updateExternalData(
     id: string,
     data: {
+      provider: string;
       externalId?: string;
       paymentUrl?: string;
       rawResponse?: any;
