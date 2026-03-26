@@ -5,7 +5,7 @@ import { PaymentResponse } from 'src/types/payment/interfaces/paymentResponse.in
 export class AltMockProvider implements PaymentProvider {
   async createPayment(data: CreatePaymentDTO): Promise<PaymentResponse> {
     // Simula pequeno delay
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 3));
 
     return {
       success: true,

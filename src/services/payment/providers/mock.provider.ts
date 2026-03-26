@@ -5,7 +5,7 @@ import { PaymentResponse } from 'src/types/payment/interfaces/paymentResponse.in
 export class MockProvider implements PaymentProvider {
   async createPayment(data: CreatePaymentDTO): Promise<PaymentResponse> {
     // Simula pequeno delay
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 3));
 
     // 30% chance de falhar (pra testar fallback)
     const shouldFail = Math.random() < 0.3;
