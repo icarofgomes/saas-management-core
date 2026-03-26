@@ -82,6 +82,20 @@ Uma vez `paid`, o pagamento se torna imutável.
 
 ---
 
+### 🏗 Arquitetura Preparada para Fila / Event Bus
+
+O sistema de pagamentos já está preparado para integração futura com filas e eventos assíncronos:
+
+- `PaymentService` publica eventos de pagamento (`payment_updated`) via **EventPublisher** abstrato.
+- Implementações podem ser **InMemoryPublisher** (mock/testes) ou qualquer fila como **RabbitMQ**, **Kafka** ou **AWS SQS**.
+- Isso permite **processamento assíncrono** de side-effects, como:
+  - Notificação de usuários
+  - Atualização de dashboards
+  - Geração de relatórios financeiros
+- O objetivo é demonstrar **arquitetura desacoplada**, permitindo evoluir o sistema sem modificar o core de pagamentos.
+
+---
+
 ## 📊 Modelo de Dados (Resumo)
 
 | Entidade | Principais Campos                      | Relacionamentos |
