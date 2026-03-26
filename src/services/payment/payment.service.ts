@@ -10,11 +10,19 @@ import { PaymentStatus } from 'src/types/payment/paymentStatus.type';
 import { AppError } from 'src/errors/AppError';
 import { ErrorMessages } from 'src/errors/ErrorMessages';
 import { logger } from 'src/utils/logger';
+import { EventPublisher } from 'src/types/events/interfaces/eventPublisher.interface';
+import { InMemoryPublisher } from 'src/events/inMemoryPublisher';
 
 export class PaymentService {
   private paymentRepository = new PaymentRepository();
   private paymentProviderService = new PaymentProviderService();
   private invoiceRepository = new InvoiceRepository();
+  private eventPublisher: EventPublisher;
+
+  constructor(eventPublisher?: EventPublisher) {
+    // Se não passar nada, usa dummy
+    this.eventPublisher = eventPublisher || new InMemoryPublisher();
+  }
 
   async requestPayment(invoiceId: string, transaction?: Transaction) {
     const externalTransaction = !!transaction;
@@ -136,6 +144,13 @@ export class PaymentService {
         externalId,
         previousStatus: payment.status,
         newStatus: status,
+      });
+
+      // 🚀 Publish event
+      await this.eventPublisher.publish('payment_updated', {
+        paymentId: payment.id,
+        invoiceId: payment.invoiceId,
+        status,
       });
 
       return { status: 'SUCCESS' };
